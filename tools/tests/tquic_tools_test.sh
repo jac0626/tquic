@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 
 # Copyright (c) 2024 The TQUIC Authors.
 #
