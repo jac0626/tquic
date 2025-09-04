@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x
 
 # ============================================================================
 # Network Environment Test Orchestrator
