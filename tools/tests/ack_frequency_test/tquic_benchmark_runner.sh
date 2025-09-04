@@ -26,7 +26,7 @@
 TEST_ITERATIONS=10
 
 # Path to TQUIC binaries
-TQUIC_BIN_PATH="/root/tquic/target/release"
+TQUIC_BIN_PATH="../../../target/release"
 
 # Main test script
 TEST_SCRIPT="../tquic_tools_test.sh"
