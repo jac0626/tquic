@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x
 
 # Copyright (c) 2024 The TQUIC Authors.
 #
@@ -49,7 +50,7 @@ TEST_FILE="10M"
 PATH_NUM=4
 
 # Logging level
-LOG_LEVEL="debug"
+LOG_LEVEL="error"
 
 # Additional client/server options
 CLI_OPTIONS=""
