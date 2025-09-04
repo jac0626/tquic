@@ -1,0 +1,32 @@
+
+name: Run Benchmark & Upload Results
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  run-benchmark:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set script permissions
+        run: |
+          chmod +x tools/tests/ack_frequency_test/set_network_env.sh
+          chmod +x tools/tests/ack_frequency_test/tquic_benchmark_runner.sh
+      
+      - name: Run benchmark script
+        working-directory: tools/tests/ack_frequency_test
+        run: sudo ./multi_network_benchmark.sh
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: tools/tests/ack_frequency_test/result-no-jitter/
+
