@@ -23,7 +23,7 @@
 # ============================================================================
 
 # Number of test iterations to run
-TEST_ITERATIONS=3
+TEST_ITERATIONS=10
 
 # Path to TQUIC binaries
 TQUIC_BIN_PATH="/root/tquic/target/release"

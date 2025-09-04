@@ -53,7 +53,7 @@ NETWORK_TYPES="home mobile"
 CC_ALGOS="Bbr3 Bbr Cubic Copa"
 
 # Output directory for results
-RESULT_DIR="result-no-jitter-0.25"
+RESULT_DIR="result-no-jitter"
 
 # Delay between different algorithm tests (in seconds)
 INTER_TEST_DELAY=5
