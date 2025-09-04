@@ -60,6 +60,7 @@ use std::fmt;
 use std::net::IpAddr;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::time;
 use std::time::Duration;
 use std::time::Instant;
@@ -356,6 +357,8 @@ pub struct Config {
 
     /// Find TLS config according to server name.
     tls_config_selector: Option<Arc<dyn tls::TlsConfigSelector>>,
+
+    ack_frequency_manager: Arc<Mutex<dyn AckFrequencyManager>>,
 }
 
 impl Config {
@@ -405,6 +408,7 @@ impl Config {
             recovery: RecoveryConfig::default(),
             multipath: MultipathConfig::default(),
             tls_config_selector: None,
+            ack_frequency_manager: Arc::new(Mutex::new(DefaultAckFrequencyManager::default())),
         })
     }
 
@@ -493,6 +497,18 @@ impl Config {
     /// The default value is `25`.
     pub fn set_max_ack_delay(&mut self, v: u64) {
         self.local_transport_params.max_ack_delay = cmp::min(v, VINT_MAX);
+    }
+
+    /// Enable ACK Frequency extension.
+    ///
+    /// The `min_delay_us` is the minimum ACK delay in microseconds that this
+    /// endpoint is willing to accept.
+    /// note this extension is conflict with multi_path,so you should not  enable them together
+    pub fn enable_ack_frequency(&mut self, min_delay_us: u64) {
+        if self.local_transport_params.enable_multipath {
+            panic!("ACK Frequency extension is not compatible with multipath");
+        }
+        self.local_transport_params.min_ack_delay = Some(min_delay_us);
     }
 
     /// Set the maximum number of ack-eliciting packets the endpoint receives before
@@ -624,6 +640,9 @@ impl Config {
     /// Set the `enable_multipath` transport parameter.
     /// The default value is false. (Experimental)
     pub fn enable_multipath(&mut self, v: bool) {
+        if v && self.local_transport_params.min_ack_delay.is_some() {
+            panic!("Multipath is not compatible with ACK Frequency extension");
+        }
         self.local_transport_params.enable_multipath = v;
     }
 
@@ -758,6 +777,10 @@ impl Config {
         tls_config_selector: Arc<dyn tls::TlsConfigSelector>,
     ) {
         self.tls_config_selector = Some(tls_config_selector);
+    }
+
+    pub fn set_ack_frequency_manager(&mut self, manager: impl AckFrequencyManager + 'static) {
+        self.ack_frequency_manager = Arc::new(Mutex::new(manager));
     }
 
     /// Generate random address token key.
@@ -1221,6 +1244,7 @@ mod tests {
     }
 }
 
+pub use crate::ack_frequency::{AckFrequencyManager, DefaultAckFrequencyManager, SendEvent};
 pub use crate::congestion_control::CongestionControlAlgorithm;
 pub use crate::connection::path::Path;
 pub use crate::connection::Connection;
@@ -1272,3 +1296,8 @@ pub mod timer_queue;
 mod token;
 mod trans_param;
 mod window;
+
+mod ack_frequency;
+#[cfg(test)]
+#[path = "connection/ack_frequency_test.rs"]
+mod ack_frequency_test;

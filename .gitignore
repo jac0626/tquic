@@ -20,3 +20,5 @@ Cargo.lock
 .DS_Store
 
 dist
+
+tools/tests/ack_frequency_test/result*
