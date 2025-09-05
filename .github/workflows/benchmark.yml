@@ -22,22 +22,18 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y iproute2
+          sudo apt-get install -y iproute2 python3 python3-pip
 
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build project
         run: cargo build --release --all
-
-      - name: Set script permissions
-        run: |
-          chmod +x tools/tests/ack_frequency_test/set_network_env.sh
-          chmod +x tools/tests/ack_frequency_test/tquic_benchmark_runner.sh
+          
 
       - name: Run benchmark script
         working-directory: tools/tests/ack_frequency_test
-        run: sudo ./multi_network_benchmark.sh
+        run: sudo python3 multi_network_benchmark.py
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
