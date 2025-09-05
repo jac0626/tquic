@@ -164,10 +164,10 @@ impl DefaultAckFrequencyManager {
 impl AckFrequencyManager for DefaultAckFrequencyManager {
     fn on_ack_received(&mut self, stats: &AckFrequencyPathStats) -> Option<Frame> {
         // Calculate new parameters based on draft recommendations.
-        let req_max_ack_delay = (stats.srtt.as_micros() as f64 * 1.0).round() as u64;
+        let req_max_ack_delay = (stats.srtt.as_micros() as f64 * 0.075).round() as u64;
 
         let ack_eliciting_threshold = if stats.max_datagram_size > 0 {
-            (((stats.cwnd as f64 * 1.0) / (stats.max_datagram_size as f64)) as u64).max(1)
+            (((stats.cwnd as f64 * 0.075) / (stats.max_datagram_size as f64)) as u64).max(1)
         } else {
             1
         };
