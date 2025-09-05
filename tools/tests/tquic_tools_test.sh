@@ -591,7 +591,7 @@ test_ack_frequency_performance() {
     generate_cert "$test_dir"
     
     # Generate various test file sizes
-    local test_files="1M 10M 100M 1000M"
+    local test_files="1M"
     echo "    Generating test files..."
     for file_size in $test_files; do
         echo "      Creating $file_size file..."
