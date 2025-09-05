@@ -49,7 +49,7 @@ TEST_FILE="10M"
 PATH_NUM=4
 
 # Logging level
-LOG_LEVEL="error"
+LOG_LEVEL="debug"
 
 # Additional client/server options
 CLI_OPTIONS=""

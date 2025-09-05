@@ -110,6 +110,7 @@ do
         echo "Pausing before next iteration..." | tee -a "$LOG_FILE"
         sleep 2
     fi
+    rm -rf test-*
 done
 
 # ============================================================================
