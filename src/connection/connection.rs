@@ -175,7 +175,7 @@ pub struct Connection {
     need_send_ack_frequency: Option<Frame>,
     need_send_immediate_ack: bool,
 
-    last_immediate_ack_for_rtt: Option<time::Instant>,
+    last_ack: Option<time::Instant>,
 }
 
 impl Connection {
@@ -290,7 +290,7 @@ impl Connection {
             ack_frequency_manager: conf.ack_frequency_manager.clone(),
             need_send_ack_frequency: None,
             need_send_immediate_ack: false,
-            last_immediate_ack_for_rtt: None,
+            last_ack: None,
         };
 
         let write_method = conn.get_write_method();
@@ -343,7 +343,7 @@ impl Connection {
     pub fn peer_transport_params(&self) -> &TransportParams {
         &self.peer_transport_params
     }
-    fn should_send_periodic_immediate_ack(&mut self) -> bool {
+    fn should_send_periodic_ack(& self) -> bool {
         if self.peer_transport_params.min_ack_delay.is_none() {
             return false;
         }
@@ -355,7 +355,7 @@ impl Connection {
 
         let now = time::Instant::now();
 
-        match self.last_immediate_ack_for_rtt {
+        match self.last_ack {
             Some(last_sent) => {
                 let min_interval = time::Duration::from_millis(1);
                 let interval = srtt.max(min_interval);
@@ -1476,6 +1476,9 @@ impl Connection {
             return Ok(());
         }
 
+        // Call should_send_periodic_ack before mutably borrowing self.spaces
+        let should_send_periodic_ack = self.should_send_periodic_ack();
+
         let space = self.spaces.get_mut(space_id).ok_or(Error::InternalError)?;
         if space.need_send_ack {
             return Ok(());
@@ -2059,13 +2062,11 @@ impl Connection {
         pkt_num: u64,
         pkt_type: PacketType,
     ) -> Result<()> {
+        
         if self.peer_transport_params.min_ack_delay.is_none() {
             return Ok(());
         }
-        // Check for periodic IMMEDIATE_ACK for RTT sampling
-        if self.should_send_periodic_immediate_ack() {
-            self.need_send_immediate_ack = true;
-        }
+        
         if st.is_probe {
             if self
                 .ack_frequency_manager
@@ -2113,7 +2114,6 @@ impl Connection {
                 st.ack_eliciting = true;
                 st.in_flight = true;
                 self.need_send_immediate_ack = false;
-                self.last_immediate_ack_for_rtt = Some(time::Instant::now());
                 debug!("write immediate ACK");
             }
         }
@@ -2377,6 +2377,7 @@ impl Connection {
         space.largest_acked_sent_in_ack = space.recv_pkt_num_need_ack.max();
         space.need_send_ack = false;
         space.ack_eliciting_pkts_since_last_sent_ack = 0;
+        self.last_ack = Some(time::Instant::now());
 
         Ok(())
     }
