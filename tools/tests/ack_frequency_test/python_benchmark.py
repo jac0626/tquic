@@ -38,7 +38,7 @@ TEST_FILES = ["1M", "10M", "100M","1000M"]
 MIN_ACK_DELAYS = [0, 2000]
 
 # Default log level
-LOG_LEVEL = "info"
+LOG_LEVEL = "debug"
 
 # ============================================================================
 # Helper Functions
@@ -209,7 +209,8 @@ def run_single_test_iteration(cc_algo):
                                              capture_output=True, text=True)
                 metrics["ack_packets"] = int(ack_count_proc.stdout.strip()) if ack_count_proc and ack_count_proc.stdout else 0
             except (ValueError, AttributeError):
-                metrics["ack_packets"] = 0
+               print("  WARNING: Could not parse ACK packet count.")
+               metrics["ack_packets"] = 0
 
             iteration_results.append(metrics)
             print(f"  Finished test. Throughput: {metrics['throughput']:.2f} Mbps")
