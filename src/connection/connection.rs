@@ -1483,7 +1483,11 @@ impl Connection {
         if space.need_send_ack {
             return Ok(());
         }
-
+        if should_send_periodic_ack {
+            space.need_send_ack = true;
+            space.ack_timer = None;
+            return Ok(());
+        }
         // An endpoint MUST acknowledge all ack-eliciting Initial and Handshake
         // packets immediately
         if space.id == SpaceId::Initial || space.id == SpaceId::Handshake {

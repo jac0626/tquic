@@ -33,14 +33,14 @@ NETWORK_TYPES = ["home","mobile"]
 CC_ALGOS = ["Bbr","Bbr3","Cubic","Copa"]
 
 # Output directory for results
-RESULT_DIR = "result-no-jitter"
+RESULT_DIR = "result-throughput"
 
 # Delay between different algorithm tests (in seconds)
 INTER_TEST_DELAY = 5
 
 # Paths to required scripts
 SET_ENV_SCRIPT = "./set_network_env.sh"
-BENCHMARK_RUNNER_SCRIPT = "./python_benchmark.py"
+BENCHMARK_RUNNER_SCRIPT = "./throughput_benchmark.py"
 
 
 def check_prerequisites():
