@@ -1834,13 +1834,51 @@ impl Bbr3 {
         cap = cap.max(self.config.min_cwnd);
         self.cwnd = self.cwnd.min(cap);
     }
+    /// 根据 BBRv3 当前状态计算 ACK Frequency 参数
+    ///
+    /// 返回 (req_max_ack_delay_us, ack_eliciting_threshold, reordering_threshold)
+    fn compute_ack_frequency_params(&self) -> (u64, u64, u64) {
+        // 在恢复阶段，需要最及时的ACK反馈来快速修复丢包。
+        if self.in_recovery(Instant::now()) {
+            // 策略: 1ms 延迟, 1个包阈值 (最激进策略，立即确认)
+            return (0, 1, 1);
+        }
+
+        match self.state {
+            // 加速探测阶段 (Startup, Refill, Up)，需要高频反馈来快速响应网络变化。
+            State::Startup | State::ProbeBwRefill | State::ProbeBwUp => {
+                // 策略: 5ms 延迟, 2个包阈值 (高频策略)
+                (0, 1, 1)
+            },
+
+            // RTT探测阶段，目标是排空队列以测量最小RTT，应尽可能减少ACK流量的干扰。
+            State::ProbeRTT => {
+                // 策略: 采用较大的延迟和阈值来显著降低ACK频率，以获得更纯净的RTT样本。
+                (0, 1, 1)
+            },
+
+            // 稳定或减速阶段 (Drain, Down, Cruise)，这是应用ACK Frequency优化的主要时机。
+            State::Drain | State::ProbeBwDown | State::ProbeBwCruise => {
+                let packets_in_cwnd = self.cwnd / self.config.max_datagram_size;
+                
+                // 策略: 阈值设为拥塞窗口的1/4（大约4个ACK覆盖一个窗口），且最小为2。
+                // 延迟设为10ms，作为节省资源和保持响应性的平衡点。
+                let threshold = (packets_in_cwnd / 4).max(2);
+                let delay_us = 10_000;
+
+               (1000, 10, 1)
+            }
+        }
+    }
 }
 
 impl CongestionController for Bbr3 {
     fn name(&self) -> &str {
         "BBRv3"
     }
-
+    fn get_ack_frequency_params(&self) -> (u64, u64, u64) {
+        self.compute_ack_frequency_params()
+    }
     fn congestion_window(&self) -> u64 {
         self.cwnd.max(self.config.min_cwnd)
     }

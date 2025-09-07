@@ -260,7 +260,7 @@ impl Cubic {
         
         let packets_in_cwnd = self.cwnd / self.config.max_datagram_size;
         
-        (1000, packets_in_cwnd/2, 3)
+        (1000, packets_in_cwnd, 3)
     }
     /// Calculate window increase during congestion avoidance.
     ///

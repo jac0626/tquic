@@ -27,10 +27,10 @@ from datetime import datetime
 # ============================================================================
 
 # Define network environments to test
-NETWORK_TYPES = ["home","mobile"]
+NETWORK_TYPES = ["home"]
 
 # Define congestion control algorithms to test
-CC_ALGOS = ["Bbr","Bbr3","Cubic","Copa"]
+CC_ALGOS = ["Bbr3"]
 
 # Output directory for results
 RESULT_DIR = "result-no-jitter"

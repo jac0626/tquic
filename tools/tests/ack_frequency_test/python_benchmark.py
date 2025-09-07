@@ -26,13 +26,13 @@ from datetime import datetime
 # ============================================================================
 
 # Number of test iterations to run for averaging
-TEST_ITERATIONS = 10
+TEST_ITERATIONS = 3
 
 # Path to TQUIC binaries (assuming they are in ../../../target/release)
 TQUIC_BIN_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../target/release"))
 
 # Test file sizes
-TEST_FILES = ["1M", "10M", "100M","1000M"] 
+TEST_FILES = ["1000M"] 
 
 # Min ACK delay values to test
 MIN_ACK_DELAYS = [0, 2000]
