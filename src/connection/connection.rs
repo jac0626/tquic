@@ -343,7 +343,7 @@ impl Connection {
     pub fn peer_transport_params(&self) -> &TransportParams {
         &self.peer_transport_params
     }
-    fn should_send_periodic_ack(& self) -> bool {
+    fn should_send_periodic_ack(&self) -> bool {
         if self.peer_transport_params.min_ack_delay.is_none() {
             return false;
         }
@@ -809,25 +809,11 @@ impl Connection {
                 // (e.g., new packet loss detected or RTT updated) before
                 // considering an ACK strategy update.
                 if self.peer_transport_params.min_ack_delay.is_some() && space_id == SpaceId::Data {
-                    let new_srtt = path.recovery.rtt.smoothed_rtt();
-                    if lost_pkts > 0 || old_srtt != new_srtt {
-                        let stats = crate::ack_frequency::AckFrequencyPathStats {
-                            min_ack_delay: self.peer_transport_params.min_ack_delay.unwrap(),
-                            srtt: new_srtt,
-                            min_rtt: path.recovery.rtt.min_rtt(),
-                            cwnd: path.recovery.congestion.congestion_window(),
-                            bytes_in_flight: path.recovery.bytes_in_flight as u64,
-                            max_datagram_size: path.recovery.max_datagram_size,
-                        };
-
-                        if let Some(frame) = self
-                            .ack_frequency_manager
-                            .lock()
-                            .unwrap()
-                            .on_ack_received(&stats)
-                        {
-                            self.need_send_ack_frequency = Some(frame);
-                        }
+                    if let Some(frame) = self.ack_frequency_manager.lock().unwrap().on_ack_received(
+                        path.recovery.congestion.as_ref(),
+                        self.peer_transport_params.min_ack_delay.unwrap_or(0),
+                    ) {
+                        self.need_send_ack_frequency = Some(frame);
                     }
                 }
 
@@ -1483,7 +1469,11 @@ impl Connection {
         if space.need_send_ack {
             return Ok(());
         }
-
+        if should_send_periodic_ack {
+            space.need_send_ack = true;
+            space.ack_timer = None;
+            return Ok(());
+        }
         // An endpoint MUST acknowledge all ack-eliciting Initial and Handshake
         // packets immediately
         if space.id == SpaceId::Initial || space.id == SpaceId::Handshake {
@@ -1506,40 +1496,53 @@ impl Connection {
         }
 
         // Reordering and Gap Check.
+
         if reordering_threshold > 0 {
-            if pkt_num < space.largest_rx_ack_eliciting_pkt_num {
-                // A re-ordered packet was received. Acknowledge immediately to prevent
-                // peer from spuriously marking it as lost.
-                space.need_send_ack = true;
-                space.ack_timer = None;
-                return Ok(());
+            //  Section 6.2: "When an ack-eliciting packet is received with a packet number
+            // less than Largest Acked, this still triggers an immediate acknowledgement..."
+            if let Some(largest_acked) = space.largest_acked_sent_in_ack {
+                if pkt_num < largest_acked {
+                    space.need_send_ack = true;
+                    space.ack_timer = None;
+
+                    return Ok(());
+                }
             }
 
-            if let Some(largest_acked) = space.largest_acked_sent_in_ack {
-                let largest_unacked = pkt_num;
-                let largest_reported_missing = largest_acked.saturating_sub(reordering_threshold);
-
-                // Find the smallest unreported missing packet.
-                let mut smallest_unreported_missing = None;
-                for p in (largest_reported_missing + 1)..largest_unacked {
-                    if !space.recv_pkt_num_win.contains(p) {
-                        smallest_unreported_missing = Some(p);
-                        break;
-                    }
+            if reordering_threshold == 1 {
+                if pkt_num > space.largest_rx_ack_eliciting_pkt_num + 1 {
+                    space.need_send_ack = true;
+                    space.ack_timer = None;
+                    return Ok(());
                 }
+            } else {
+                // reordering_threshold > 1
 
-                if let Some(smallest_missing) = smallest_unreported_missing {
-                    if largest_unacked - smallest_missing >= reordering_threshold {
-                        space.need_send_ack = true;
-                        space.ack_timer = None;
-                        return Ok(());
+                if let Some(largest_acked) = space.largest_acked_sent_in_ack {
+                    let largest_unacked = space.largest_rx_ack_eliciting_pkt_num;
+                    let largest_reported_missing =
+                        largest_acked.saturating_sub(reordering_threshold);
+
+                    let mut smallest_unreported_missing = None;
+                    for p in (largest_reported_missing + 1)..largest_unacked {
+                        if !space.recv_pkt_num_win.contains(p) {
+                            smallest_unreported_missing = Some(p);
+                            break;
+                        }
+                    }
+
+                    if let Some(smallest_missing) = smallest_unreported_missing {
+                        if largest_unacked.saturating_sub(smallest_missing) >= reordering_threshold
+                        {
+                            space.need_send_ack = true;
+                            space.ack_timer = None;
+                            return Ok(());
+                        }
                     }
                 }
             }
         }
-
         // TODO: ECN Check from draft-ietf-quic-ack-frequency-11 section 6.4
-
         // Delay Check: set a timer to send an ACK if one isn't sent by other triggers.
         if space.ack_timer.is_none() {
             space.ack_timer = Some(time::Instant::now() + req_max_ack_delay);
@@ -2062,11 +2065,10 @@ impl Connection {
         pkt_num: u64,
         pkt_type: PacketType,
     ) -> Result<()> {
-        
         if self.peer_transport_params.min_ack_delay.is_none() {
             return Ok(());
         }
-        
+
         if st.is_probe {
             if self
                 .ack_frequency_manager

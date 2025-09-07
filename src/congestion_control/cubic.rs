@@ -245,7 +245,23 @@ impl Cubic {
             initial_rtt,
         }
     }
-
+   /// return (req_max_ack_delay, ack_eliciting_threshold, reordering_threshold)
+   fn compute_ack_frequency_params(&self) -> (u64, u64, u64) {
+        return (1,25_000, 1);
+        if self.in_recovery(Instant::now()) {
+            return (1_000, 0, 1); 
+        }
+        
+        
+        if self.in_slow_start() {
+            return (5_000, 1, 1);
+        }
+        
+        
+        let packets_in_cwnd = self.cwnd / self.config.max_datagram_size;
+        
+        (1000, packets_in_cwnd/2, 3)
+    }
     /// Calculate window increase during congestion avoidance.
     ///
     /// See <https://www.rfc-editor.org/rfc/rfc9438.html#name-window-increase-function>.
@@ -279,7 +295,9 @@ impl CongestionController for Cubic {
     fn name(&self) -> &str {
         "CUBIC"
     }
-
+    fn get_ack_frequency_params(&self) -> (u64, u64, u64) {
+        self.compute_ack_frequency_params()
+    }
     fn on_sent(&mut self, now: Instant, packet: &mut SentPacket, bytes_in_flight: u64) {
         // Better follow cubic curve after idle period.
         // See <https://github.com/torvalds/linux/commit/30927520dbae297182990bb21d08762bcc35ce1d>.

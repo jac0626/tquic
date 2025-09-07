@@ -121,6 +121,11 @@ pub trait CongestionController {
     /// Name of congestion control algorithm.
     fn name(&self) -> &str;
 
+    /// Get ACK_FREQUENCY parameters:  (req_max_ack_delay, ack_eliciting_threshold, reordering_threshold)
+    fn get_ack_frequency_params(&self) -> (u64, u64, u64) {
+        (1,25_000, 1)
+    }
+
     /// Callback after packet was sent out.
     fn on_sent(&mut self, now: Instant, packet: &mut SentPacket, bytes_in_flight: u64);
 
