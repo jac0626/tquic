@@ -24,7 +24,7 @@ from datetime import datetime
 TEST_ITERATIONS = 10
 TQUIC_BIN_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../target/release"))
 TEST_FILE_SIZE = "1K"
-REQUEST_COUNT = 100000
+REQUEST_COUNT = 10000
 LOG_LEVEL = "off" # Logs are no longer needed for parsing
 
 MIN_ACK_DELAYS = [0, 2000]
