@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
 
 # ============================================================================
-# Network Latency Test Orchestrator (Python)
+# Network Latency Test Orchestrator (Python) - v2
 # ============================================================================
 # Purpose: Orchestrate comprehensive network latency tests across
-#          different network environments and congestion control algorithms.
-#
-# Description:
-#   This script automates the latency testing process by:
-#   1. Setting up various network environments (e.g., 5G, 4G, home)
-#   2. Running latency tests with different congestion control algorithms
-#   3. Collecting and organizing results in timestamped log files
+#          different network environments, congestion control algorithms,
+#          and concurrency levels.
 # ============================================================================
 
 import os
@@ -22,19 +17,12 @@ from datetime import datetime
 # Configuration
 # ============================================================================
 
-# Define network environments to test
 NETWORK_TYPES = ["home", "mobile"]
-
-# Define congestion control algorithms to test
 CC_ALGOS = ["Bbr", "Bbr3", "Cubic", "Copa"]
+CONCURRENCY_LEVELS = [10,100,1000,2000,3000,4000,5000]
 
-# Output directory for results
 RESULT_DIR = "result-latency"
-
-# Delay between different algorithm tests (in seconds)
 INTER_TEST_DELAY = 5
-
-# Paths to required scripts
 SET_ENV_SCRIPT = "./set_network_env.sh"
 BENCHMARK_RUNNER_SCRIPT = "./latency_benchmark.py"
 
@@ -62,21 +50,16 @@ def main():
     print("=" * 60)
     print("Network Latency Performance Test Suite")
     print("=" * 60)
-    print("Test Configuration:")
     print(f"  - Network Environments: {', '.join(NETWORK_TYPES)}")
     print(f"  - Congestion Control Algorithms: {', '.join(CC_ALGOS)}")
+    print(f"  - Concurrency Levels: {', '.join(map(str, CONCURRENCY_LEVELS))}")
     print(f"  - Results Directory: {RESULT_DIR}")
-    print(f"  - Test Session ID: {timestamp}")
     print("=" * 60)
-    print()
-
-    total_tests = 0
-    successful_tests = 0
 
     for network in NETWORK_TYPES:
-        print("=" * 60)
+        print(f"\n{'=' * 60}")
         print(f"NETWORK ENVIRONMENT: {network}")
-        print("=" * 60)
+        print(f"{ '=' * 60}")
         
         try:
             subprocess.run(["bash", SET_ENV_SCRIPT, network], check=True)
@@ -85,48 +68,37 @@ def main():
             continue
 
         print(f"Network environment '{network}' successfully configured.")
-        print("Starting latency tests...")
-        print()
 
-        for i, cc_algo in enumerate(CC_ALGOS):
-            total_tests += 1
+        for cc_algo in CC_ALGOS:
             result_file = os.path.join(RESULT_DIR, f"result_{network}_{cc_algo}_{timestamp}.txt")
+            print(f"\n  {'=' * 50}")
+            print(f"  Congestion Control: {cc_algo} -> Output: {result_file}")
+            print(f"  {'=' * 50}")
 
-            print("-" * 60)
-            print(f"Test #{total_tests}")
-            print(f"  Network Environment: {network}")
-            print(f"  Congestion Control: {cc_algo}")
-            print(f"  Output File: {result_file}")
-            print("-" * 60)
+            # Open file once to write header
+            with open(result_file, 'w') as f:
+                f.write(f"Latency Test Results for {cc_algo} on {network} network\n")
+                f.write(f"Test Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
 
-            try:
-                subprocess.run(["python3", BENCHMARK_RUNNER_SCRIPT, result_file, cc_algo], check=True)
-                successful_tests += 1
-                print("\n✓ Test completed successfully")
-            except subprocess.CalledProcessError:
-                print("\n✗ Test failed or completed with errors")
+            for concurrency in CONCURRENCY_LEVELS:
+                print(f"\n  {'-' * 48}")
+                print(f"  Testing with Concurrency: {concurrency}")
+                print(f"  {'-' * 48}")
 
-            if i < len(CC_ALGOS) - 1:
-                print(f"Pausing for {INTER_TEST_DELAY} seconds before next test...")
-                time.sleep(INTER_TEST_DELAY)
+                try:
+                    # Append results to the same file
+                    subprocess.run(["python3", BENCHMARK_RUNNER_SCRIPT, result_file, cc_algo, str(concurrency)], check=True)
+                    print("\n  ✓ Test completed successfully")
+                except subprocess.CalledProcessError:
+                    print("\n  ✗ Test failed or completed with errors")
 
-        print(f"All tests for network environment '{network}' completed.")
-        print("=" * 60)
-        print()
+                if concurrency != CONCURRENCY_LEVELS[-1]:
+                    time.sleep(INTER_TEST_DELAY)
 
-    failed_tests = total_tests - successful_tests
-    summary = f"""
-============================================================
-LATENCY TEST SUITE COMPLETED
-============================================================
-Summary:
-  - Total Tests Executed: {total_tests}
-  - Successful Tests: {successful_tests}
-  - Failed Tests: {failed_tests}
-  - Results Location: {RESULT_DIR}
-============================================================
-"""
-    print(summary)
+    print(f"\n{'=' * 60}")
+    print("LATENCY TEST SUITE COMPLETED")
+    print(f"Results are in: {RESULT_DIR}")
+    print(f"{ '=' * 60}")
 
 if __name__ == "__main__":
     main()
