@@ -466,6 +466,7 @@ impl Client {
             context.conn_stats.sent_bytes,
             context.conn_stats.lost_bytes
         );
+        println!("total acks: {}", context.conn_stats.ack_count);
         println!();
     }
 }
@@ -494,6 +495,7 @@ fn update_conn_stats(total: &mut ConnectionStats, one: &ConnectionStats) {
     total.recv_bytes += one.recv_bytes;
     total.sent_bytes += one.sent_bytes;
     total.lost_bytes += one.lost_bytes;
+    total.ack_count += one.ack_count;
 }
 
 /// Client worker with single thread.

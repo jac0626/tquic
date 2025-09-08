@@ -2382,7 +2382,7 @@ impl Connection {
         space.need_send_ack = false;
         space.ack_eliciting_pkts_since_last_sent_ack = 0;
         self.last_ack = Some(time::Instant::now());
-
+        self.stats.ack_count += 1;
         Ok(())
     }
 
@@ -4694,6 +4694,9 @@ pub struct ConnectionStats {
 
     /// Smoothed RTT.
     pub srtt: time::Duration,
+
+    /// total ack counts
+    pub ack_count: u64,
 }
 
 /// FrameWriteStatus is used to collect various states during writing frames
