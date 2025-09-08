@@ -134,6 +134,7 @@ def run_single_test_iteration(cc_algo, concurrency):
             "ip", "netns", "exec", "client_ns",
             os.path.join(TQUIC_BIN_PATH, "tquic_client"),
             "-c", "10.0.0.2:8443", "--log-level", LOG_LEVEL,
+            "--threads", "6",
             "--total-requests-per-thread", str(REQUEST_COUNT),
             "--max-requests-per-conn", "0", "--max-concurrent-requests", str(concurrency),
             f"https://example.org/{TEST_FILE_SIZE}"
